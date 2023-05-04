@@ -1,77 +1,116 @@
+<script setup>
+const course = useCourse()
+const route = useRoute()
+
+definePageMeta({
+  middleware: [function ({ params }, from) {
+    const course = useCourse()
+
+    const chapter = course.chapters.find(chapter => chapter.slug === params.chapterSlug)
+
+    if (!chapter) {
+      return abortNavigation(
+        createError({
+          statusCode: 404,
+          message: 'Chapter not found',
+        })
+      )
+    }
+
+    const lesson = chapter.lessons.find(lesson => lesson.slug === params.lessonSlug)
+
+    if (!lesson) {
+      return abortNavigation(
+        createError({
+          statusCode: 404,
+          message: 'Lesson not found',
+        })
+      )
+    }
+  },
+    'auth'
+  ]
+})
+
+if (route.params.lessonSlug === '3-typing-component-events') {
+  console.log(route.params.paramthatdoesnotexistwhoops.capitalizeIsNotAMethod())
+}
+
+const chapter = computed(() => {
+  return course.chapters.find(chapter => chapter.slug === route.params.chapterSlug)
+})
+
+const lesson = computed(() => {
+  return chapter.value.lessons.find(lesson => lesson.slug === route.params.lessonSlug)
+})
+
+
+const forceError = () => {
+  throw new Error('This is a test error')
+};
+
+const progress = useLocalStorage('progress', [])
+
+const isLessonComplete = computed(() => {
+  if (!progress.value[chapter.value.number - 1]) {
+    return false
+  }
+
+  if (!progress.value[chapter.value.number - 1][lesson.value.number - 1]) {
+    return false
+  }
+
+  return progress.value[chapter.value.number - 1][lesson.value.number - 1]
+})
+
+const toggleComplete = () => {
+  if (!progress.value[chapter.value.number - 1]) {
+    progress.value[chapter.value.number - 1] = []
+  }
+
+  progress.value[chapter.value.number - 1][lesson.value.number - 1] = !isLessonComplete.value
+
+  localStorage.setItem('progress', JSON.stringify(progress.value))
+}
+
+useHead({
+  title: `${lesson.value.title} - ${chapter.value.title} - ${course.title}`,
+  meta: [
+    {
+      hid: 'description',
+      name: 'description',
+      content: lesson.value.text,
+    },
+  ],
+})
+</script>
+
 <template>
   <div>
-    <p class="mt-0 uppercase font-bold text-slate-400 mb-1">Lesson {{ chapter.number }} - {{ lesson.number }}</p>
-    <h2 class="my-0">{{ lesson.title }}</h2>
+    <p class="mt-0 uppercase font-bold text-slate-400 mb-1">
+      Lesson {{ chapter.number }} - {{ lesson.sourceUrl }}
+    </p>
+    <h2 class="my-0">
+      {{ lesson.title }}
+    </h2>
     <div class="flex space-x-4 mt-2 mb-8">
-      <NuxtLink
-        v-if="lesson.sourceUrl"
-        class="font-normal text-md text-gray-500"
-        :to="lesson.sourceUrl">
+      <NuxtLink v-if="lesson.sourceUrl"
+                class="font-normal text-md text-gray-500"
+                :to="lesson.sourceUrl">
         Download Source Code
       </NuxtLink>
-      <NuxtLink
-        v-if="lesson.downloadUrl"
-        class="font-normal text-md text-gray-500"
-        :to="lesson.downloadUrl">
+      <NuxtLink v-if="lesson.downloadUrl"
+                class="font-normal text-md text-gray-500"
+                :to="lesson.downloadUrl">
         Download Video
       </NuxtLink>
     </div>
-    <VideoPlayer
-      :if="lesson?.videoId"
-      :videoId="lesson?.videoId" />
+    <VideoPlayer :if="lesson?.videoId"
+                 :video-id="lesson?.videoId" />
     <p>{{ lesson.text }}</p>
-    <LessonCompleteButton
-      :modelValue="isLessonComplete"
-      @update:modelValue="toggleComplete" />
+    <LessonCompleteButton :model-value="isLessonComplete"
+                          @update:model-value="forceError" />
   </div>
 </template>
-
-<script setup>
-  const course = useCourse()
-  const route = useRoute()
-
-  const chapter = computed(() => {
-    return course.chapters.find((chapter) => chapter.slug === route.params.chapterSlug)
-  })
-
-  const lesson = computed(() => {
-    return chapter.value.lessons.find((lesson) => lesson.slug === route.params.lessonSlug)
-  })
-
-  useHead({
-    title: `${lesson.value.title} - ${chapter.value.title} - ${course.title}`,
-    meta: [
-      {
-        hid: "description",
-        name: "description",
-        content: lesson.value.text,
-      },
-    ],
-  })
-
-  const progress = useLocalStorage("progress", [])
-
-  const isLessonComplete = computed(() => {
-    if (!progress.value[chapter.value.number - 1]) {
-      return false
-    }
-
-    if (!progress.value[chapter.value.number - 1][lesson.value.number - 1]) {
-      return false
-    }
-
-    return progress.value[chapter.value.number - 1][lesson.value.number - 1]
-  })
-
-  const toggleComplete = () => {
-    if (!progress.value[chapter.value.number - 1]) {
-      progress.value[chapter.value.number - 1] = []
-    }
-
-    progress.value[chapter.value.number - 1][lesson.value.number - 1] = !isLessonComplete.value
-
-    localStorage.setItem("progress", JSON.stringify(progress.value))
-  }
-</script>
 
 <style scoped></style>
